@@ -82,7 +82,11 @@ def read_file(id, filename, start, stop):
   #  'rx': -68515, 'ry': -19927, 'rz': 24226, 'Tm': 50236.2845}
   with open(filepath, 'r') as f:
     for line in f:
-      entry = json.loads(line)
+      if line.startswith('{'):
+        entry = json.loads(line)
+      else:
+        # TODO: Read other format
+        pass
       ts = entry['ts']
       try:
         dt = datetime.datetime.strptime(ts, '%d %b %Y %H:%M:%S')
