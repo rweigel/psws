@@ -1,32 +1,43 @@
 # Usage:
 #   python data.py <id> <start> <stop>
-# where <id> is the station ID, e.g., S000028 found in first column of catalog.csv
-# <start> and <stop> are HAPI ISO date strings, e.g., 2023-03-22T00:00:00Z
+#   python data.py <id> <start> <stop> <parameters>
 #
-# Example:
-#   python data.py W2NAF 2025-10-20 2025-10-21
+# <id> is the station ID, e.g., S000028 found in first column of catalog.csv
+# <start> and <stop> are 20-character HAPI ISO date strings, e.g.,
+# 2023-03-22T00:00:00Z
 #
-# Returns HAPI CSV stream to stdout
-#
-# Equivalent API response to:
+# The output of this script is HAPI CSV and equivalent to the response from:
 #   hapi/data?dataset=<id>&start=<start>&stop=<stop>
+#   hapi/data?dataset=<id>&start=<start>&stop=<stop>&parameters=<parameters>
+#
+# Examples:
+#  python data.py W2NAF 2025-10-20T00:00:00Z 2025-10-22T00:00:00Z
+#  python data.py W2NAF 2025-10-20T23:30:19Z 2025-10-20T23:31:30Z
+#  python data.py W2NAF 2025-10-20T23:30:19Z 2025-10-20T23:31:30Z Field_Vector
 
-import sys
 import os
 import re
+import sys
 import json
 import datetime
 
-# Read a file of formatted data points and convert to HAPI format    
-# { "ts":"22 Mar 2023 20:23:13", "rt":27.00, "x":10.5296, "y":-8.8477, "z":47.7188, "rx":93, "ry":-78, "rz":423, "Tm": 49.6613 }
-id, start, stop = sys.argv[1], sys.argv[2], sys.argv[3]
 debug = True
+
+# Read a file of form
+# { "ts":"22 Mar 2023 20:23:13", "rt":27.00, "x":10.5296, "y":-8.8477, "z":47.7188, "rx":93, "ry":-78, "rz":423, "Tm": 49.6613 }
+# and return HAPI CSV
+
+id, start, stop = sys.argv[1], sys.argv[2], sys.argv[3]
+
+if len(sys.argv) > 4:
+  parameters = [p.strip() for p in sys.argv[4].split(",")]
+else:
+  parameters = ['Field_Vector', 'rxryrz', 'rt', 'lt', 'Tm']
 
 if debug:
   print(f"ID: {id}, start: {start}, stop: {stop}")
 
 def files_needed(id, start, stop):
-
   base = os.path.join("data", id)
   if not os.path.exists(base):
     print(f"Directory not found: {base}", file=sys.stderr)
@@ -66,7 +77,9 @@ def files_needed(id, start, stop):
 def read_file(id, filename, start, stop):
   filepath = os.path.join("data", id, filename)
   # Row format:
-  # {'ts': '21 Oct 2025 04:01:59', 'rt': 32.5, 'lt': 41.69, 'x': -45676.67, 'y': -13284.67, 'z': 16150.67, 'rx': -68515, 'ry': -19927, 'rz': 24226, 'Tm': 50236.2845}
+  # {'ts': '21 Oct 2025 04:01:59', 'rt': 32.5, 'lt': 41.69,
+  #  'x': -45676.67, 'y': -13284.67, 'z': 16150.67,
+  #  'rx': -68515, 'ry': -19927, 'rz': 24226, 'Tm': 50236.2845}
   with open(filepath, 'r') as f:
     for line in f:
       entry = json.loads(line)
@@ -77,13 +90,21 @@ def read_file(id, filename, start, stop):
       except Exception as e:
         if debug:
           print(f"Failed to parse ts '{ts}': {e}", file=sys.stderr)
-      if entry['ts'][0:10] < start:
+      if entry['ts'][0:20] < start:
         continue
-      if entry['ts'][0:10] >= stop:
-        continue
-      row = f"{entry['ts']},{entry['x']},{entry['y']},{entry['z']},"
-      row += f"{entry['rx']},{entry['ry']},{entry['rz']},"
-      row += f"{entry['rt']},{entry['lt']},{entry['Tm']}"
+      if entry['ts'][0:20] >= stop:
+        break
+      row = entry['ts']
+      if 'Field_Vector' in parameters:
+        row += f",{entry['x']},{entry['y']},{entry['z']}"
+      if 'rxryrz' in parameters:
+        row += f",{entry['rx']},{entry['ry']},{entry['rz']}"
+      if 'rt' in parameters:
+        row += f",{entry['rt']}"
+      if 'lt' in parameters:
+        row += f",{entry['lt']}"
+      if 'Tm' in parameters:
+        row += f",{entry['Tm']}"
       print(row)
 
 files = files_needed(id, start, stop)
