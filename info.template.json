@@ -28,7 +28,7 @@
       "type": "double",
       "size": [3],
       "units": "nT",
-      "label": ["X", "Y", "Z"],
+      "label": ["Bx", "By", "Bz"],
       "coordinateSystemName": "GEO",
       "vectorComponents": ["x", "y", "z"],
       "description": "Magnetic field vector components in geographic coordinates (?)",
@@ -38,8 +38,10 @@
       "name": "rxryrz",
       "type": "integer",
       "size": [3],
-      "units": "?",
-      "label": ["rx", "ry", "rz"],
+      "units": "nT",
+      "label": ["Brx", "Bry", "Brz"],
+      "coordinateSystemName": "GEO",
+      "vectorComponents": ["x", "y", "z"],
       "description": "?",
       "fill": "99999.0"
     },
@@ -53,12 +55,20 @@
       "fill": "99999.0"
     },
     {
-      "name": "rtlTmt",
+      "name": "rtlt",
       "type": "double",
-      "size": [3],
+      "size": [2],
       "units": null,
       "label": ["rt", "lt"],
-      "description": "",
+      "description": "?",
+      "fill": "99999.0"
+    },
+    {
+      "name": "Tm",
+      "type": "double",
+      "units": "F",
+      "label": "Tm",
+      "description": "Remote temperature (?)",
       "fill": "99999.0"
     }
   ]
