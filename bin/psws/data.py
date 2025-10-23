@@ -21,35 +21,24 @@ import sys
 import json
 import datetime
 
-debug = True
+debug = False
 
-# Read a file of form
-# { "ts":"22 Mar 2023 20:23:13", "rt":27.00, "x":10.5296, "y":-8.8477, "z":47.7188, "rx":93, "ry":-78, "rz":423, "Tm": 49.6613 }
-# and return HAPI CSV
-
-id, start, stop = sys.argv[1], sys.argv[2], sys.argv[3]
-
-if len(sys.argv) > 4:
-  parameters = [p.strip() for p in sys.argv[4].split(",")]
-else:
-  parameters = ['Field_Vector', 'rxryrz', 'rt', 'lt', 'Tm']
-
-if debug:
-  print(f"ID: {id}, start: {start}, stop: {stop}")
+# Get DATA_DIR from environment variable
+DATA_DIR = os.getenv("DATA_DIR")
 
 def files_needed(id, start, stop):
-  base = os.path.join("data", id)
-  if not os.path.exists(base):
-    print(f"Directory not found: {base}", file=sys.stderr)
+  dataset_dir = os.path.join(DATA_DIR, id)
+  if not os.path.exists(dataset_dir):
+    print(f"Directory not found: {dataset_dir}", file=sys.stderr)
     sys.exit(1)
 
-  files = [f for f in os.listdir(base) if f.endswith("runmag.log")]
+  files = [f for f in os.listdir(dataset_dir) if f.endswith("runmag.log")]
   files.sort()
   if not files:
     sys.exit(0)
 
   if debug:
-    print(f"Found {len(files)} files that end with runmag.log in {base}")
+    print(f"Debug: Found {len(files)} files that end with runmag.log in {dataset_dir}")
 
   # Extract date from files with name of form w2naf-20251021-runmag.log
   date_re = re.compile(r'-[0-9]{8}-')
@@ -60,7 +49,7 @@ def files_needed(id, start, stop):
   stop = stop.replace("-", "")[0:8]
 
   if debug:
-    print(f"Looking for files with data in range [{start}, {stop}]")
+    print(f"Debug: Looking for files with data in range [{start}, {stop}]")
 
   for file in files:
     m = date_re.search(file)
@@ -70,12 +59,13 @@ def files_needed(id, start, stop):
         files_needed.append(file)
 
   if debug:
-    print(f"Found {len(files_needed)} files with data in range [{start}, {stop}]")
+    print(f"Debug: Found {len(files_needed)} files with data in range [{start}, {stop}]")
 
   return files_needed
 
+
 def read_file(id, filename, start, stop):
-  filepath = os.path.join("data", id, filename)
+  filepath = os.path.join(DATA_DIR, id, filename)
   # Row format:
   # {'ts': '21 Oct 2025 04:01:59', 'rt': 32.5, 'lt': 41.69,
   #  'x': -45676.67, 'y': -13284.67, 'z': 16150.67,
@@ -87,18 +77,22 @@ def read_file(id, filename, start, stop):
       else:
         # TODO: Read other format
         pass
+
       ts = entry['ts']
       try:
         dt = datetime.datetime.strptime(ts, '%d %b %Y %H:%M:%S')
         entry['ts'] = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
       except Exception as e:
         if debug:
-          print(f"Failed to parse ts '{ts}': {e}", file=sys.stderr)
+          print(f"Debug: Failed to parse ts '{ts}': {e}", file=sys.stderr)
+
       if entry['ts'][0:20] < start:
         continue
       if entry['ts'][0:20] >= stop:
         break
+
       row = entry['ts']
+
       if 'Field_Vector' in parameters:
         row += f",{entry['x']},{entry['y']},{entry['z']}"
       if 'rxryrz' in parameters:
@@ -111,6 +105,18 @@ def read_file(id, filename, start, stop):
         row += f",{entry['Tm']}"
       print(row)
 
+
+id, start, stop = sys.argv[1], sys.argv[2], sys.argv[3]
+
+if len(sys.argv) > 4:
+  parameters = [p.strip() for p in sys.argv[4].split(",")]
+else:
+  parameters = ['Field_Vector', 'rxryrz', 'rt', 'lt', 'Tm']
+
+if debug:
+  print(f"Debug: dataset: {id}, start: {start}, stop: {stop}")
+
+dirs = {'S000028': 'W2NAF', 'S000029': 'W2NAE'}
 files = files_needed(id, start, stop)
 for files in files:
   read_file(id, files, start, stop)

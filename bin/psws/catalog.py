@@ -6,11 +6,16 @@
 # Equivalent API response to:
 #   hapi/catalog
 
+
 import csv
 import json
 
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+
 catalog = []
-with open('catalog.csv', 'r') as csvfile:
+with open(SCRIPT_DIR / 'catalog.csv', 'r') as csvfile:
   reader = csv.reader(csvfile)
   for row in reader:
     if row[0].startswith('#'):

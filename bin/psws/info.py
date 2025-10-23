@@ -13,10 +13,14 @@
 import sys
 import csv
 import json
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 def get_catalog():
   catalog = {}
-  with open('catalog.csv', 'r') as csvfile:
+  file = SCRIPT_DIR / 'catalog.csv'
+  with open(file, 'r') as csvfile:
     reader = csv.reader(csvfile)
     for row in reader:
       if row[0].startswith('#'):
@@ -33,7 +37,7 @@ def get_catalog():
 
 catalog = get_catalog()
 
-with open('info.template.json', 'r') as f:
+with open(SCRIPT_DIR / 'info.template.json', 'r') as f:
   info = json.load(f)
 
 id = sys.argv[1]
@@ -43,6 +47,10 @@ if id not in catalog:
 
 info['startDate'] = catalog[id]['startDateTime']
 info['stopDate'] = catalog[id]['stopDateTime']
-info['geoLocation'] = [catalog[id]['lat'], catalog[id]['long'], catalog[id]['elevation']]
+info['geoLocation'] = [
+  catalog[id]['lat'],
+  catalog[id]['long'],
+  catalog[id]['elevation']
+]
 
 print(json.dumps(info, indent=2))
