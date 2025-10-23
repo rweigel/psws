@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 def app(config):
   import fastapi
 
+
   app = fastapi.FastAPI()
 
   patho = config.get("path", "/hapi").rstrip("/")
@@ -143,33 +144,66 @@ def _indexhtml(config):
   return response
 
 
-def _catalog(query_params, config):
+def _call(endpoint, query_params, config):
   import hapiserver
 
-  logger.info(f"/catalog request: {query_params}")
+  logger.info(f"/{endpoint} request: {query_params}")
   query = _query_params_dict(query_params)
-  logger.info(f"/catalog request: {query}")
+  logger.info(f"/{endpoint} request: {query}")
 
-  error = _query_param_error('catalog', query)
+  error = _query_param_error(endpoint, query)
   if error:
-    return _error_response(error, config)
+    return None, error
 
-  if 'scripts' in config and 'catalog' in config['scripts']:
-    catalog, error = hapiserver.exec(config["scripts"]["catalog"])
+  args = {}
+  if endpoint == 'info':
+    dataset, error = _get('dataset', query, config)
+    args = {"dataset": dataset}
     if error:
-      return _error_response(error, config)
+      return None, error
 
-  if 'functions' in config and 'catalog' in config['functions']:
+  if 'scripts' in config and endpoint in config['scripts']:
+    args = [str(args[x]) for x in args.keys()]
+    args = " ".join(args)
+    if len(args) > 0:
+      data, error = hapiserver.exec(config["scripts"][endpoint], args=args)
+    else:
+      data, error = hapiserver.exec(config["scripts"][endpoint])
+    if error:
+      return None, error
+
     try:
-      catalog = config['functions']['catalog']()
+      data = json.loads(data)
     except Exception as e:
       error = {
         "code": 1500,
-        "message": "Error executing catalog function",
-        "message_console": f"catalog(): Error executing catalog function: {e}",
+        "message": "Error parsing JSON returned by catalog script",
         "exception": e
       }
-      return _error_response(error, config)
+      return None, error
+
+  if 'functions' in config and endpoint in config['functions']:
+    try:
+      args = [str(args[x]) for x in args.keys()]
+      if len(args) > 0:
+        data = config['functions'][endpoint](*args)
+      else:
+        data = config['functions'][endpoint]()
+    except Exception as e:
+      error = {
+        "code": 1500,
+        "message": f"Error executing {endpoint} function",
+        "exception": e
+      }
+      return None, error
+
+  return data, None
+
+def _catalog(query_params, config):
+
+  catalog, error = _call('catalog', query_params, config)
+  if error:
+    return _error_response(error, config)
 
   content = {
     "HAPI": config.get("HAPI", "3.0"),
@@ -177,7 +211,7 @@ def _catalog(query_params, config):
       "code": 1200,
       "message": "OK"
     },
-    "catalog": json.loads(catalog)
+    "catalog": catalog
   }
 
   response = {

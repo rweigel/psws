@@ -5,6 +5,7 @@ import uvicorn
 
 import hapiserver
 
+
 logger = logging.getLogger(__name__)
 format = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 logging.basicConfig(level='INFO', format=format)
@@ -36,6 +37,7 @@ config = {
 def catalog():
   return [{"id": "S000028"}, {"id": "S000082"}]
 
+del config['api']['scripts']['catalog']
 config['api']['functions'] = {"catalog": catalog}
 
 for name, value in config.get("ENV", {}).items():
