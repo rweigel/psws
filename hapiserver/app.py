@@ -159,6 +159,18 @@ def _catalog(query_params, config):
     if error:
       return _error_response(error, config)
 
+  if 'functions' in config and 'catalog' in config['functions']:
+    try:
+      catalog = config['functions']['catalog']()
+    except Exception as e:
+      error = {
+        "code": 1500,
+        "message": "Error executing catalog function",
+        "message_console": f"catalog(): Error executing catalog function: {e}",
+        "exception": e
+      }
+      return _error_response(error, config)
+
   content = {
     "HAPI": config.get("HAPI", "3.0"),
     "status": {

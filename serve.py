@@ -33,6 +33,11 @@ config = {
   }
 }
 
+def catalog():
+  return [{"id": "S000028"}, {"id": "S000082"}]
+
+config['api']['functions'] = {"catalog": catalog}
+
 for name, value in config.get("ENV", {}).items():
   os.environ[name] = str(value)
   logger.info(f"Environment variable set: {name}={value}")
