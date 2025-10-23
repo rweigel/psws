@@ -1,5 +1,6 @@
 # Usage:
-#   python serve_test.py
+#   python serve.py & python serve_test.py
+# If edits are made to serve.py, CTRL-C and re-execute the above.
 
 import time
 import logging
@@ -18,7 +19,7 @@ def _log_test_title(url):
 
 def _wait_for_server(url, retries=50, delay=0.2):
   # Wait for the server to start
-  print("Checking if server is ready by making request to /config ...")
+  print(f"Checking if server is ready by making request to {url} ...")
   for i in range(retries):
     try:
       response = requests.get(url, timeout=0.5)

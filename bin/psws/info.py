@@ -10,10 +10,14 @@
 # Equivalent API response to:
 #   hapi/info?dataset=<id>
 
+import os
 import sys
 import csv
 import json
 from pathlib import Path
+
+# Get DATA_DIR from environment variable
+#DATA_DIR = os.getenv("DATA_DIR")
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 

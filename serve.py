@@ -13,7 +13,6 @@ base_dir = os.path.normpath(os.path.join(os.path.dirname(__file__)))
 
 config = {
   "api": {
-    "lib": "django",
     "index.html": os.path.join(base_dir, "html", "index.html"),
     "path": "/hapi",
     "HAPI": "3.3",
@@ -38,7 +37,6 @@ for name, value in config.get("ENV", {}).items():
   os.environ[name] = str(value)
   logger.info(f"Environment variable set: {name}={value}")
 
-app, urlpatterns = hapiserver.api(config['api'])
-print(urlpatterns)
+app = hapiserver.api(config['api'])
 logger.info("Starting server")
 uvicorn.run(app, **config['server'])

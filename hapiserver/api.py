@@ -6,58 +6,8 @@ import hapiserver
 logger = logging.getLogger(__name__)
 
 def api(config):
-  if 'lib' not in config:
-    logger.warning("No 'lib' specified in config, defaulting to 'fastapi'")
 
-  if config.get("lib", "fastapi") == "fastapi":
-    return _fastapi(config), None
-
-  if config.get("lib") == "django":
-    return _django()
-
-def _django():
-  import django.urls
-
-  import django.conf
-  import django.core.wsgi
-  import asgiref.wsgi
-
-  settings = {
-      'DEBUG': True,
-      'SECRET_KEY': 'your-secret-key-here',
-      'ROOT_URLCONF': __name__,
-      'ALLOWED_HOSTS': ['*'],
-      'MIDDLEWARE': [
-          'django.middleware.common.CommonMiddleware',
-      ],
-      'INSTALLED_APPS': [
-          'django.contrib.contenttypes',
-          'django.contrib.auth',
-      ]
-  }
-  django.conf.settings.configure(**settings)
-
-
-  def hello_world(request):
-    # collect query params (preserve multiple values)
-    params = {}
-    for k in request.GET.keys():
-      vals = request.GET.getlist(k)
-      params[k] = vals if len(vals) > 1 else vals[0]
-    print(f"Query parameters: {params}")
-    return django.http.JsonResponse({'message': 'Hello, World!', 'query': params})
-
-  # URL configuration
-  urlpatterns = [
-    django.urls.path('', hello_world, name='hello_world')
-  ]
-
-  # Application setup
-  application = django.core.wsgi.get_wsgi_application()
-
-  app = asgiref.wsgi.WsgiToAsgi(application)
-
-  return app, urlpatterns
+  return _fastapi(config)
 
 def _fastapi(config):
   import fastapi
