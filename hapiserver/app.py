@@ -5,11 +5,8 @@ import hapiserver
 
 logger = logging.getLogger(__name__)
 
-def api(config):
 
-  return _fastapi(config)
-
-def _fastapi(config):
+def app(config):
   import fastapi
 
   app = fastapi.FastAPI()
@@ -60,6 +57,7 @@ def _fastapi(config):
       return fastapi.responses.StreamingResponse(stream(), **response)
 
   return app
+
 
 def _query_params_dict(query_params):
   """Convert Starlette QueryParams to a plain dict.

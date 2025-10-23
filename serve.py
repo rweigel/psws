@@ -37,6 +37,6 @@ for name, value in config.get("ENV", {}).items():
   os.environ[name] = str(value)
   logger.info(f"Environment variable set: {name}={value}")
 
-app = hapiserver.api(config['api'])
+app = hapiserver.app(config['api'])
 logger.info("Starting server")
 uvicorn.run(app, **config['server'])
