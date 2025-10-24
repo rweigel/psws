@@ -5,45 +5,34 @@ import uvicorn
 
 import hapiserver
 
-
 logger = logging.getLogger(__name__)
 format = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 logging.basicConfig(level='INFO', format=format)
 
-base_dir = os.path.normpath(os.path.join(os.path.dirname(__file__)))
 
-config = {
-  "api": {
-    "index.html": os.path.join(base_dir, "html", "index.html"),
-    "path": "/hapi",
-    "HAPI": "3.3",
-    "scripts": {
-      "catalog": os.path.join(base_dir, "bin", "psws", "catalog.py"),
-      "info": os.path.join(base_dir, "bin", "psws", "info.py"),
-      "data": os.path.join(base_dir, "bin", "psws", "data.py")
-    }
-  },
-  "ENV": {
-    "DATA_DIR": os.path.join(base_dir, "data", "psws")
-  },
-  "server": {
-    "host": "0.0.0.0",
-    "port": 5999,
-    "workers": 1,
-    "server_header": False,
-  }
-}
+import sys
+import json
+if len(sys.argv) > 1:
+  config_file = sys.argv[1]
+else:
+  config_file = "/Users/weigel/git/hapi/server-python-general/bin/psws/config.json"
+with open(config_file, "r") as f:
+  config = json.load(f)
 
 def catalog():
   return [{"id": "S000028"}, {"id": "S000082"}]
 
-del config['api']['scripts']['catalog']
-config['api']['functions'] = {"catalog": catalog}
+if False:
+  del config['api']['scripts']['catalog']
+  config['api']['functions'] = {"catalog": catalog}
 
-for name, value in config.get("ENV", {}).items():
-  os.environ[name] = str(value)
-  logger.info(f"Environment variable set: {name}={value}")
-
-app = hapiserver.app(config['api'])
-logger.info("Starting server")
-uvicorn.run(app, **config['server'])
+if __name__ == "__main__" and config.get("server", {}).get("workers", 1) > 1:
+  import sys
+  import json
+  os.environ["HAPI_CONFIG"] = json.dumps(config['api'])
+  uvicorn.run("hapiserver:serve", factory=True, **config["server"])
+  sys.exit(0)
+else:
+  app = hapiserver.app(config['api'])
+  logger.info("Starting server")
+  uvicorn.run(app, **config['server'])

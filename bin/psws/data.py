@@ -24,7 +24,8 @@ import datetime
 debug = False
 
 # Get DATA_DIR from environment variable
-DATA_DIR = os.getenv("DATA_DIR")
+DATA_DIR = os.getenv("PSWS_DATA_DIR")
+DATA_DIR = os.path.expanduser(DATA_DIR)
 
 def files_needed(id, start, stop):
   dataset_dir = os.path.join(DATA_DIR, id)

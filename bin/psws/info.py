@@ -10,14 +10,12 @@
 # Equivalent API response to:
 #   hapi/info?dataset=<id>
 
-import os
-import sys
 import csv
 import json
 from pathlib import Path
 
-# Get DATA_DIR from environment variable
-#DATA_DIR = os.getenv("DATA_DIR")
+# Get PSWS_DATA_DIR from environment variable
+#PSWS_DATA_DIR = os.getenv("PSWS_DATA_DIR")
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -39,22 +37,27 @@ def get_catalog():
       }
   return catalog
 
-catalog = get_catalog()
+def info(dataset):
+  catalog = get_catalog()
 
-with open(SCRIPT_DIR / 'info.template.json', 'r') as f:
-  info = json.load(f)
+  with open(SCRIPT_DIR / 'info.template.json', 'r') as f:
+    info = json.load(f)
 
-id = sys.argv[1]
-if id not in catalog:
-  print(f"ID {id} not found in catalog", file=sys.stderr)
-  sys.exit(1)
+  dataset = sys.argv[1]
+  if dataset not in catalog:
+    print(f"ID {dataset} not found in catalog", file=sys.stderr)
+    sys.exit(1)
 
-info['startDate'] = catalog[id]['startDateTime']
-info['stopDate'] = catalog[id]['stopDateTime']
-info['geoLocation'] = [
-  catalog[id]['lat'],
-  catalog[id]['long'],
-  catalog[id]['elevation']
-]
+  info['startDate'] = catalog[dataset]['startDateTime']
+  info['stopDate'] = catalog[dataset]['stopDateTime']
+  info['geoLocation'] = [
+    catalog[dataset]['lat'],
+    catalog[dataset]['long'],
+    catalog[dataset]['elevation']
+  ]
 
-print(json.dumps(info, indent=2))
+  return info
+
+if __name__ == "__main__":
+  import sys
+  print(json.dumps(info(sys.argv[1]), indent=2))
