@@ -32,17 +32,13 @@ def wait_for_server(url, retries=50, delay=0.2):
 
 
 def start_server(config_file):
-  import json
   import atexit
   import multiprocessing
-
-  with open(config_file, "r") as f:
-    config = json.load(f)
 
   logger.info("Starting server in background process")
   kwargs = {
     "target": start_server_process,
-    "args": (config,),
+    "args": (config_file,),
     "daemon": True
   }
   server_proc = multiprocessing.Process(**kwargs)
@@ -50,12 +46,11 @@ def start_server(config_file):
   atexit.register(stop_server, server_proc)
 
 
-def start_server_process(config):
+def start_server_process(config_file):
   import uvicorn
   import hapiserver
-  app = hapiserver.app(config['api'])
   logger.info("Starting server")
-  uvicorn.run(app, **config['server'])
+  hapiserver.run(config_file)
 
 
 def stop_server(server_proc):

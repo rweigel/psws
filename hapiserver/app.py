@@ -8,6 +8,12 @@ logger = logging.getLogger(__name__)
 def app(config):
   import fastapi
 
+  if isinstance(config, str):
+    with open(config, "r") as f:
+      config = f.read()
+      config = json.loads(config)
+    config = config.get('api', {})
+
   _set_env(config)
   _expand_env(config)
   _check_config(config)
@@ -142,6 +148,7 @@ def _indexhtml(config):
       "content": "Not Found",
     }
 
+  response['headers'] = _headers(config['HAPI'], cors=False)
   response['media_type'] = "text/html"
   return response
 
@@ -222,7 +229,7 @@ def _catalog(query_params, config):
   response = {
     "content": json.dumps(content, indent=2),
     "media_type": "application/json",
-    "headers": _cors_headers(),
+    "headers": _headers(config['HAPI']),
   }
 
   return response
@@ -260,7 +267,7 @@ def _info(query_params, config):
   response = {
     "content": json.dumps(content, indent=2),
     "media_type": "application/json",
-    "headers": _cors_headers(),
+    "headers": _headers(config['HAPI']),
   }
 
   return response
@@ -291,18 +298,24 @@ def _data(query_params, config):
   response = {
     "content": stream,
     "media_type": "text/csv",
-    "headers": _cors_headers()
+    "headers": _headers(config['HAPI']),
   }
 
   return response
 
 
-def _cors_headers():
-    return {
+def _headers(hapi_version, cors=True):
+  server = f"HAPI/{hapi_version} Server"
+  server += ";https://github.com/hapi-server/server-python-general"
+  server += f"; v{hapiserver.__version__}"
+  headers = {"Server": server}
+  if cors:
+    headers.update({
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "*",
       "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-  }
+    })
+  return headers
 
 
 def _get(name, query, config):
