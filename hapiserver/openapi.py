@@ -12,7 +12,7 @@ def load_openapi_docs():
 
   try:
     # Get the path relative to the hapiserver module
-    base_dir = os.path.dirname(os.path.dirname(__file__))
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     openapi_path = os.path.join(base_dir, 'openapi.json')
 
     with open(openapi_path, 'r') as f:
@@ -24,14 +24,41 @@ def load_openapi_docs():
     logger.error(emsg)
     exit(1)
 
-def get(path, parameter=None):
+def kwargs(path):
   """Extract documentation from OpenAPI spec"""
+
+  docs = get(path)
+
+  if path[-1] == 'get':
+    return {
+        'tags': docs['tags'],
+        'summary': docs['summary'],
+        'description': docs['description']
+    }
+
+  if path[0] == 'info' and len(path) == 1:
+    return {
+          'title': docs['title'],
+          'description': docs['description'],
+          'contact': docs['contact'],
+          'license': docs['license'],
+          'docs_url': docs.get('docs_url', '/docs'),
+          'redoc_url': docs.get('redoc_url', '/redoc'),
+          'openapi_url': docs.get('openapi_url', '/openapi.json')
+  }
+
+  return {}
+
+def get(path, kwargs=None):
+  """Extract documentation from OpenAPI spec"""
+  import copy
 
   if openapi_spec is None:
     load_openapi_docs()
 
+  spec = copy.deepcopy(openapi_spec)
   if isinstance(path, (list, tuple)):
-    node = openapi_spec
+    node = spec.copy()
     for key in path:
       if isinstance(node, dict):
         node = node.get(key, {})
