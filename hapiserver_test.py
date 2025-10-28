@@ -47,7 +47,6 @@ def start_server(config_file):
 
 
 def start_server_process(config_file):
-  import uvicorn
   import hapiserver
   logger.info("Starting server")
   hapiserver.run(config_file)
@@ -91,6 +90,13 @@ def run_tests(port, config_file):
   assert 'application/json' in response.headers['Content-Type']
   assert 'parameters' in response.json()
   assert len(response.json()['parameters']) > 0
+
+  url = f"{url_base}/info?xdataset=S000028"
+  response = requests.get(url)
+  assert response.status_code == 400
+  assert 'application/json' in response.headers['Content-Type']
+  assert 'status' in response.json()
+  assert response.json()['status']['code'] == 1401
 
   url = f"{url_base}/data?dataset=S000028&&start=2025-10-20T00:00:00Z&stop=2025-10-20T00:00:01Z"
   response = requests.get(url)

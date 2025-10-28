@@ -14,9 +14,9 @@ def app(config):
       config = json.loads(config)
     config = config.get('api', {})
 
-  _set_env(config)
-  _expand_env(config)
-  _check_config(config)
+  hapiserver.util.set_env(config)
+  hapiserver.util.expand_env(config)
+  hapiserver.util.check_config(config)
 
   # TODO: It seems that much of the following could be auto-generated based
   # on the OpenAPI spec. fastapi-code-generator seems to apply partially,
@@ -53,13 +53,10 @@ def app(config):
 
   path = f"{patho}/info"
   logger.info(f"Initalizing endpoint {path}/")
-  info_docs = hapiserver.openapi.get(['paths', path, 'get'])
   info_kwargs = hapiserver.openapi.kwargs(['paths', path, 'get'])
-  dataset_description = info_docs['parameters']['dataset']['description']
   @app.head(path)
   @app.get(path, response_class=fastapi.responses.JSONResponse, **info_kwargs)
-  def info(request: fastapi.Request,
-           dataset: str = fastapi.Query(..., description=dataset_description)):
+  def info(request: fastapi.Request):
     response = _info(request.query_params, config)
     return fastapi.responses.Response(**response)
 
@@ -67,22 +64,10 @@ def app(config):
   path = f"{patho}/data"
   logger.info(f"Initalizing endpoint {path}/")
   data_kwargs = hapiserver.openapi.kwargs(['paths', path, 'get'])
-  data_docs = hapiserver.openapi.get(['paths', path, 'get'])
-  dataset_description = data_docs['parameters']['dataset']['description']
-  start_description = data_docs['parameters']['start']['description']
-  stop_description = data_docs['parameters']['stop']['description']
-  parameters_description = data_docs['parameters']['parameters']['description']
   @app.head(path)
   @app.get(path, **data_kwargs)
-  def data(
-    request: fastapi.Request,
-    dataset: str = fastapi.Query(..., description=dataset_description),
-    start: str = fastapi.Query(..., description=start_description),
-    stop: str = fastapi.Query(..., description=stop_description),
-    parameters: str = fastapi.Query(None, description=parameters_description)
-  ):
+  def data(request: fastapi.Request):
     response = _data(request.query_params, config)
-
     if response.get('status_code', 200) != 200:
       return fastapi.responses.Response(**response)
 
@@ -243,7 +228,7 @@ def _catalog(query_params, config):
 
   catalog, error = _call('catalog', query_params, config)
   if error:
-    return _error_response(error, config)
+    return hapiserver.error(error, config)
 
   content = {
     "HAPI": config.get("HAPI", "3.0"),
@@ -272,16 +257,16 @@ def _info(query_params, config):
 
   error = _query_param_error('info', query)
   if error:
-    return _error_response(error, config)
+    return hapiserver.error(error, config)
 
   dataset, error = _get('dataset', query, config)
   if error:
-    return _error_response(error, config)
+    return hapiserver.error(error, config)
 
   if 'scripts' in config and 'info' in config['scripts']:
     info, error = hapiserver.exec(config["scripts"]["info"], dataset)
     if error:
-      return _error_response(error, config)
+      return hapiserver.error(error, config)
 
   content = {
     "HAPI": config.get("HAPI", "3.0"),
@@ -314,14 +299,14 @@ def _data(query_params, config):
   for p in ['dataset', 'start', 'stop', 'parameters']:
     query[p], error = _get(p, query, config)
     if error:
-      return _error_response(error, config)
+      return hapiserver.error(error, config)
 
   args = f"{query['dataset']} {query['start']} {query['stop']} {query['parameters']}"
 
   if 'scripts' in config and 'data' in config['scripts']:
     stream, error = hapiserver.exec(config["scripts"]["data"], args, stream=True)
     if error:
-      return _error_response(error, config)
+      return hapiserver.error(error, config)
 
   response = {
     "content": stream,
@@ -421,131 +406,3 @@ def _get(name, query, config):
     return parameters, None
 
 
-def _error_response(error, config, message=None):
-
-  if isinstance(error, int):
-    error = _hapi_error(error, message=message)
-
-  if 'message' not in error:
-    message = _hapi_error(error['code'])['message']
-
-  if 'exception' in error:
-    if 'message_console' in error:
-      logger.error(f"{error['message_console']}: {error['exception']}")
-    else:
-      logger.error(f"{message}: {error['exception']}")
-  else:
-    if 'message_console' in error:
-      logger.error(f"{error['message_console']}")
-    else:
-      logger.error(f"{message}")
-
-  content = {
-    "status": {
-      "code": error['code'],
-      "message": message
-    }
-  }
-
-  if error['code'] >= 1400 and error['code'] <= 1499:
-    status_code = 400
-  if error['code'] >= 1500 and error['code'] <= 1599:
-    status_code = 500
-  if error['code'] == 1500:
-    status_code = 500
-  if error['code'] == 1501:
-    status_code = 501
-
-  response = {
-    "status_code": status_code,
-    "content": json.dumps(content, indent=2),
-    "media_type": "application/json",
-  }
-
-  return response
-
-
-def _hapi_error(code, message=None):
-  errors = {
-    1200: {"status":{"code": 1200, "message": "OK"}},
-    1201: {"status":{"code": 1201, "message": "OK - no data for time range"}},
-    1400: {"status":{"code": 1400, "message": "Bad request - user input error"}},
-    1401: {"status":{"code": 1401, "message": "Bad request - unknown API parameter name"}},
-    1402: {"status":{"code": 1402, "message": "Bad request - syntax error in start time"}},
-    1403: {"status":{"code": 1403, "message": "Bad request - syntax error in stop time"}},
-    1404: {"status":{"code": 1404, "message": "Bad request - start equal to or after stop"}},
-    1405: {"status":{"code": 1405, "message": "Bad request - start < startDate and/or stop > stopDate"}},
-    1406: {"status":{"code": 1406, "message": "Bad request - unknown dataset id"}},
-    1407: {"status":{"code": 1407, "message": "Bad request - unknown dataset parameter"}},
-    1408: {"status":{"code": 1408, "message": "Bad request - too much time or data requested"}},
-    1409: {"status":{"code": 1409, "message": "Bad request - unsupported output format"}},
-    1410: {"status":{"code": 1410, "message": "Bad request - unsupported include value"}},
-    1411: {"status":{"code": 1411, "message": "Bad request - out-of-order or duplicate parameters"}},
-    1412: {"status":{"code": 1412, "message": "Bad request - unsupported resolve_references value"}},
-    1413: {"status":{"code": 1413, "message": "Bad request - unsupported depth value"}},
-    1500: {"status":{"code": 1500, "message": "Internal server error"}},
-    1501: {"status":{"code": 1501, "message": "Internal server error - upstream request error"}}
-  }
-
-  if message is not None:
-    # Augment the standard message with the provided one
-    errors[code]['status']['message'] += f". {message}"
-
-  return errors.get(code, errors[1500])['status']
-
-
-def _set_env(config):
-  import os
-  for name, value in config.get("ENV", {}).items():
-    os.environ[name] = str(value)
-    logger.debug(f"Environment variable set: {name}={value}")
-
-
-def _expand_env(config):
-  import os
-  import re
-
-  env_pattern = re.compile(r'\$(?:{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)}|(?P<plain>[A-Za-z_][A-Za-z0-9_]*))')
-
-  def _replace_env(obj):
-    if isinstance(obj, dict):
-      for k, v in obj.items():
-        obj[k] = _replace_env(v)
-      return obj
-    if isinstance(obj, list):
-      return [_replace_env(v) for v in obj]
-    if isinstance(obj, tuple):
-      return tuple(_replace_env(v) for v in obj)
-    if isinstance(obj, str):
-      def repl(m):
-        name = m.group('braced') or m.group('plain')
-        return os.environ.get(name, '')
-      return env_pattern.sub(repl, obj)
-    return obj
-
-  try:
-    _replace_env(config)
-  except Exception as e:
-    logger.warning(f"Environment variable substitution failed: {e}")
-
-
-def _check_config(config):
-  import os
-  fname = config.get("index.html", None)
-  if fname is not None:
-    fname = os.path.expanduser(fname)
-    config['index.html'] = os.path.expanduser(config['index.html'])
-    if not os.path.exists(config['index.html']):
-      logger.error(f"index.html file not found: '{fname}'")
-      exit(1)
-
-  for script_name, script in config.get("scripts", {}).items():
-    config['scripts'][script_name] = os.path.expanduser(script)
-    if not os.path.exists(config['scripts'][script_name]):
-      logger.error(f"Script file for endpoint /{script_name} not found: '{script}'")
-      exit(1)
-
-  for endpoint in config.get("scripts", {}):
-    if 'functions' in config and endpoint in config['functions']:
-      logger.error(f"Both script and function defined for {endpoint} in config.")
-      exit(1)
