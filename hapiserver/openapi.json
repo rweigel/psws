@@ -1,0 +1,378 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "HAPI Server API",
+    "description": "\n    HAPI (Heliophysics Application Programmer's Interface) Server for accessing time series data.\n    \n    The HAPI specification provides a simple web API for accessing time series data. This server \n    implementation provides endpoints for discovering available datasets, getting metadata about \n    parameters, and retrieving data.\n    ",
+    "contact": {
+      "name": "HAPI Server Support",
+      "url": "https://github.com/hapi-server/server-python-general"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "3.3"
+  },
+  "paths": {
+    "/hapi/": {
+      "get": {
+        "tags": [
+          "Root"
+        ],
+        "summary": "Get server information and landing page",
+        "description": "Returns HTML landing page with server information and available endpoints",
+        "operationId": "indexhtml_hapi__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Root"
+        ],
+        "summary": "Indexhtml",
+        "operationId": "indexhtml_hapi__head",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hapi/catalog": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "Get list of available datasets",
+        "description": "Returns a list of datasets available from this HAPI server. Each dataset has an ID that can be used in subsequent info and data requests.",
+        "operationId": "catalog_hapi_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "Catalog",
+        "operationId": "catalog_hapi_catalog_head",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hapi/info": {
+      "get": {
+        "tags": [
+          "Metadata"
+        ],
+        "summary": "Get dataset metadata",
+        "description": "Returns metadata about a specific dataset, including parameter definitions, time range, and other dataset properties.",
+        "operationId": "info_hapi_info_get",
+        "parameters": [
+          {
+            "description": "Dataset identifier from the catalog",
+            "required": true,
+            "schema": {
+              "title": "Dataset",
+              "type": "string",
+              "description": "Dataset identifier from the catalog"
+            },
+            "name": "dataset",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Metadata"
+        ],
+        "summary": "Info",
+        "operationId": "info_hapi_info_head",
+        "parameters": [
+          {
+            "description": "Dataset identifier from the catalog",
+            "required": true,
+            "schema": {
+              "title": "Dataset",
+              "type": "string",
+              "description": "Dataset identifier from the catalog"
+            },
+            "name": "dataset",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hapi/data": {
+      "get": {
+        "tags": [
+          "Data"
+        ],
+        "summary": "Get time series data",
+        "description": "Returns time series data for the specified dataset and time range. Data is returned in CSV format by default.",
+        "operationId": "data_hapi_data_get",
+        "parameters": [
+          {
+            "description": "Dataset identifier from the catalog",
+            "required": true,
+            "schema": {
+              "title": "Dataset",
+              "type": "string",
+              "description": "Dataset identifier from the catalog"
+            },
+            "name": "dataset",
+            "in": "query"
+          },
+          {
+            "description": "Start time in ISO 8601 format",
+            "required": true,
+            "schema": {
+              "title": "Start",
+              "type": "string",
+              "description": "Start time in ISO 8601 format"
+            },
+            "name": "start",
+            "in": "query"
+          },
+          {
+            "description": "Stop time in ISO 8601 format",
+            "required": true,
+            "schema": {
+              "title": "Stop",
+              "type": "string",
+              "description": "Stop time in ISO 8601 format"
+            },
+            "name": "stop",
+            "in": "query"
+          },
+          {
+            "description": "Comma-separated list of parameter names to include (default is all parameters)",
+            "required": false,
+            "schema": {
+              "title": "Parameters",
+              "type": "string",
+              "description": "Comma-separated list of parameter names to include (default is all parameters)"
+            },
+            "name": "parameters",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Data"
+        ],
+        "summary": "Data",
+        "operationId": "data_hapi_data_head",
+        "parameters": [
+          {
+            "description": "Dataset identifier from the catalog",
+            "required": true,
+            "schema": {
+              "title": "Dataset",
+              "type": "string",
+              "description": "Dataset identifier from the catalog"
+            },
+            "name": "dataset",
+            "in": "query"
+          },
+          {
+            "description": "Start time in ISO 8601 format",
+            "required": true,
+            "schema": {
+              "title": "Start",
+              "type": "string",
+              "description": "Start time in ISO 8601 format"
+            },
+            "name": "start",
+            "in": "query"
+          },
+          {
+            "description": "Stop time in ISO 8601 format",
+            "required": true,
+            "schema": {
+              "title": "Stop",
+              "type": "string",
+              "description": "Stop time in ISO 8601 format"
+            },
+            "name": "stop",
+            "in": "query"
+          },
+          {
+            "description": "Comma-separated list of parameter names to include (default is all parameters)",
+            "required": false,
+            "schema": {
+              "title": "Parameters",
+              "type": "string",
+              "description": "Comma-separated list of parameter names to include (default is all parameters)"
+            },
+            "name": "parameters",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "title": "HTTPValidationError",
+        "type": "object",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "title": "ValidationError",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "loc": {
+            "title": "Location",
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            }
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

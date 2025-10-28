@@ -1,6 +1,7 @@
-__all__ = ["app", "get", "exec"]
+__all__ = ["app", "get", "exec", "openapi"]
 __version__ = "0.0.1"
 
+from hapiserver import openapi
 from hapiserver.app import app
 from hapiserver.exec import exec
 
@@ -43,6 +44,7 @@ def run(config_file):
     logger.info(f"Executing shell command: {' '.join(args)}")
     os.execvp(args[0], args)
 
+
 def factory(*args):
   """Factory function for uvicorn to create the app in each worker process.
   When
@@ -51,13 +53,13 @@ def factory(*args):
   """
   import os
   import logging
-  
+
   # Configure logging to work with uvicorn
   logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s"
   )
-  
+
   # Ensure hapiserver logs are visible
   hapiserver_logger = logging.getLogger('hapiserver')
   hapiserver_logger.setLevel(logging.INFO)

@@ -18,41 +18,86 @@ def app(config):
   _expand_env(config)
   _check_config(config)
 
-  app = fastapi.FastAPI()
+  # Load OpenAPI documentation
+  #openapi_spec = hapiserver.openapi.load_openapi_docs()
+
+  # Get app info from OpenAPI spec or use defaults
+  app_info = hapiserver.openapi.get(['info'])
+
+  # Create FastAPI app with custom OpenAPI configuration
+  logger.info("Initalizing endpoints /docs, /redoc, and /openapi.json")
+  app = fastapi.FastAPI(
+    title=app_info['title'],
+    description=app_info['description'],
+    version=app_info.get('version', config.get("HAPI", "3.3")),
+    contact=app_info['contact'],
+    license_info=app_info['license'],
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+  )
 
   patho = config.get("path", "/hapi").rstrip("/")
 
-
-  logger.info(f"Initalizing endpoint {patho}/")
-  @app.route(f"{patho}/", methods=["GET", "HEAD"])
+  path = f"{patho}/"
+  logger.info(f"Initalizing endpoint {path}")
+  root_docs = hapiserver.openapi.get(['paths', path, 'get'])
+  @app.head(path, tags=root_docs['tags'])
+  @app.get(path,
+           tags=root_docs['tags'],
+           summary=root_docs['summary'],
+           description=root_docs['description'],
+           response_class=fastapi.responses.HTMLResponse)
   def indexhtml(request: fastapi.Request):
-
     response = _indexhtml(config)
     return fastapi.responses.Response(**response)
 
 
   path = f"{patho}/catalog"
   logger.info(f"Initalizing endpoint {path}/")
-  @app.route(path, methods=["GET", "HEAD"])
+  catalog_docs = hapiserver.openapi.get(['paths', path, 'get'])
+  @app.get(path,
+           summary=catalog_docs['summary'],
+           description=catalog_docs['description'],
+           response_class=fastapi.responses.JSONResponse,
+           tags=catalog_docs['tags'])
+  @app.head(path, tags=catalog_docs['tags'])
   def catalog(request: fastapi.Request):
-
     response = _catalog(request.query_params, config)
     return fastapi.responses.Response(**response)
 
 
   path = f"{patho}/info"
   logger.info(f"Initalizing endpoint {path}/")
-  @app.route(path, methods=["GET", "HEAD"])
-  def info(request: fastapi.Request):
-
+  info_docs = hapiserver.openapi.get(['paths', path, 'get'])
+  @app.get(path,
+           summary=info_docs['summary'],
+           description=info_docs['description'],
+           tags=info_docs['tags'],
+           response_class=fastapi.responses.JSONResponse)
+  @app.head(path, tags=info_docs['tags'])
+  def info(request: fastapi.Request,
+           dataset: str = fastapi.Query(..., description=info_docs['parameters']['dataset']['description'])):
     response = _info(request.query_params, config)
     return fastapi.responses.Response(**response)
 
 
   path = f"{patho}/data"
   logger.info(f"Initalizing endpoint {path}/")
-  @app.route(path, methods=["GET", "HEAD"])
-  def data(request: fastapi.Request):
+  data_docs = hapiserver.openapi.get(['paths', path, 'get'])
+  @app.get(path,
+           tags=data_docs['tags'],
+           summary=data_docs['summary'],
+           description=data_docs['description'],
+           response_class=fastapi.responses.PlainTextResponse)
+  @app.head(path, tags=data_docs['tags'])
+  def data(
+    request: fastapi.Request,
+    dataset: str = fastapi.Query(..., description=data_docs['parameters']['dataset']['description']),
+    start: str = fastapi.Query(..., description=data_docs['parameters']['start']['description']),
+    stop: str = fastapi.Query(..., description=data_docs['parameters']['stop']['description']),
+    parameters: str = fastapi.Query(None, description=data_docs['parameters']['parameters']['description'])
+  ):
     response = _data(request.query_params, config)
 
     if response.get('status_code', 200) != 200:
